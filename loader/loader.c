@@ -11,27 +11,32 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include "linked_list.h"
 #include "exec_parser.h"
 
 static so_exec_t *exec;
+
 static struct sigaction old_action;
 
-static so_seg_t *get_segment(void *page_start_pointer) {
-	uintptr_t page_start = (uintptr_t )page_start_pointer;
-	for(int i = 0 ; i < exec->segments_no; i++) {
+static so_seg_t *get_segment(void *page_start_pointer)
+{
+	uintptr_t page_start = (uintptr_t) page_start_pointer;
+	for (int i = 0; i < exec->segments_no; i++) {
 		fprintf(stderr, "Segment %i: %p mem_size: %d file_size: %d\n",
 				i,
-				(void *)exec->segments[i].vaddr,
+				(void *) exec->segments[i].vaddr,
 				(int) exec->segments[i].mem_size,
 				(int) exec->segments[i].file_size);
-		if(exec->segments[i].vaddr <= page_start && exec->segments[i].vaddr + exec->segments[i].mem_size >= page_start) {
+		if (exec->segments[i].vaddr <= page_start
+			&& exec->segments[i].vaddr + exec->segments[i].mem_size
+				>= page_start) {
 			return &exec->segments[i];
 		}
 	}
 	return NULL;
 }
 
-static void segv_handler (int signum, siginfo_t *info, void *context)
+static void segv_handler(int signum, siginfo_t *info, void *context)
 {
 	void *addr;
 	if (signum != SIGSEGV) {
@@ -45,48 +50,59 @@ static void segv_handler (int signum, siginfo_t *info, void *context)
 		return;
 	}
 	int pageSize = getpagesize();
-	void *page_start = (void *)((int)addr & ~(pageSize-1));
+	void *page_start = (void *) ((int) addr & ~(pageSize - 1));
 
 	so_seg_t *segment = get_segment(page_start);
 
-	if(segment == NULL) {
+	if (segment == NULL) {
 		old_action.sa_sigaction(signum, info, context);
 		return;
 	}
 
+	LINKED_LIST *segment_used_pages = (LINKED_LIST *) segment->data;
+	if (!contains(&segment_used_pages, (uintptr_t) page_start)) {
+		append(&segment_used_pages, (uintptr_t) page_start);
+		printList(segment_used_pages);
+		segment->data = (void *)segment_used_pages;
+	} else {
+		old_action.sa_sigaction(signum, info, context);
+		return;
+	}
 
-	// TODO: check if page was already accessed
-	// TODO: Gabi
-
-	void *result = mmap(page_start, pageSize, segment->perm, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
+	void *result = mmap(page_start,
+						pageSize,
+						segment->perm,
+						MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED,
+						-1,
+						0);
 	if (result == MAP_FAILED) {
 		perror("MMAP FAILED");
-		exit (0);
-	} else {
+		exit(0);
+	}
+	else {
 		fprintf(stderr, "Asked for %p received %p\n", page_start, result);
 	}
 
-	if((uintptr_t)page_start >= segment->vaddr &&
-		(uintptr_t)page_start + pageSize < segment->vaddr + segment->file_size) {
-		// TODO: copy pagesize bytes from file
-	} else if ((uintptr_t)page_start >= segment->vaddr &&
-		(uintptr_t)page_start + pageSize > segment->vaddr + segment->file_size &&
-		(uintptr_t)page_start + pageSize < segment->vaddr + segment->mem_size
-		) {
-
-
-	} else if ((uintptr_t)page_start >= segment->vaddr + segment->file_size &&
-		(uintptr_t)page_start + pageSize < segment->vaddr + segment->mem_size) {
-
-	} else {
-		old_action.sa_sigaction(signum, info, context);
-		return;
-	}
+//	if((uintptr_t)page_start >= segment->vaddr &&
+//		(uintptr_t)page_start + pageSize < segment->vaddr + segment->file_size) {
+//		// TODO: copy pagesize bytes from file
+//	} else if ((uintptr_t)page_start >= segment->vaddr &&
+//		(uintptr_t)page_start + pageSize > segment->vaddr + segment->file_size &&
+//		(uintptr_t)page_start + pageSize < segment->vaddr + segment->mem_size
+//		) {
+//
+//
+//	} else if ((uintptr_t)page_start >= segment->vaddr + segment->file_size &&
+//		(uintptr_t)page_start + pageSize < segment->vaddr + segment->mem_size) {
+//
+//	} else {
+//		old_action.sa_sigaction(signum, info, context);
+//		return;
+//	}
 
 
 
 }
-
 
 int so_init_loader(void)
 {
