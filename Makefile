@@ -5,13 +5,16 @@ LDFLAGS = -m32
 .PHONY: build
 build: libso_loader.so
 
-libso_loader.so: loader.o exec_parser.o
+libso_loader.so: loader.o exec_parser.o linked_list.o
 	$(CC) $(LDFLAGS) -shared -o $@ $^
 
 exec_parser.o: loader/exec_parser.c loader/exec_parser.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 loader.o: loader/loader.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+linked_list.o: loader/linked_list.c loader/linked_list.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 .PHONY: clean
