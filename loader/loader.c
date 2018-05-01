@@ -10,12 +10,14 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "linked_list.h"
 #include "exec_parser.h"
 
 static so_exec_t *exec;
-
+static char * executable_file;
 static struct sigaction old_action;
 
 static so_seg_t *get_segment(void *page_start_pointer)
@@ -123,8 +125,25 @@ int so_init_loader(void)
 	return 0;
 }
 
+
+void get_executable(char *path) {
+	/** First we map a file */
+	int fd = open("Makefile", O_RDWR);
+	if (fd == -1)
+		perror("open");
+
+	struct stat st;
+	fstat(fd, &st);
+
+	executable_file = mmap(NULL, st.st_size,
+			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (executable_file == MAP_FAILED)
+		perror("mmap");
+}
+
 int so_execute(char *path, char *argv[])
 {
+	get_executable(path);
 	exec = so_parse_exec(path);
 	if (!exec)
 		return -1;
