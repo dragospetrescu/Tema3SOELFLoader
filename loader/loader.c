@@ -106,7 +106,7 @@ static void segv_handler(int signum, siginfo_t *info, void *context)
 
 	if ((uintptr_t) page_start < segment->vaddr + segment->file_size) {
 		lungime_date = MIN(pageSize, -(int) page_start + segment->vaddr + segment->file_size);
-		char *buf = malloc(lungime_date);
+		char buf[lungime_date];
 		int offset = segment->offset + pageSize * page_no;
 		pread(exec_fd, buf, lungime_date, offset);
 //		fprintf(stderr, "%d %s\n\n", page_no, buf);
