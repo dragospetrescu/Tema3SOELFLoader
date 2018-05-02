@@ -5,7 +5,7 @@ LDFLAGS = -m32
 .PHONY: build
 build: libso_loader.so
 
-libso_loader.so: loader.o exec_parser.o linked_list.o
+libso_loader.so: loader.o exec_parser.o already_mapped_pages.o
 	$(CC) $(LDFLAGS) -shared -o $@ $^
 
 exec_parser.o: loader/exec_parser.c loader/exec_parser.h
@@ -14,7 +14,7 @@ exec_parser.o: loader/exec_parser.c loader/exec_parser.h
 loader.o: loader/loader.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-linked_list.o: loader/linked_list.c loader/linked_list.h
+already_mapped_pages.o: loader/already_mapped_pages.c loader/already_mapped_pages.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 .PHONY: clean
