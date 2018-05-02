@@ -57,12 +57,13 @@ static void segv_handler(int signum, siginfo_t *info, void *context)
 
 	addr = info->si_addr;
 	if (addr == NULL) {
-//		fprintf(stderr, "MERE\n");
+//		fprintf(stderr, "NPE\n");
 		old_action.sa_sigaction(signum, info, context);
 		return;
 	}
 	int pageSize = getpagesize();
 	void *page_start = (void *) ((int) addr & ~(pageSize - 1));
+//	fprintf(stderr, "Page start: %p\n", page_start);
 
 	int seg_no = get_segment(page_start);
 
@@ -74,7 +75,7 @@ static void segv_handler(int signum, siginfo_t *info, void *context)
 	struct so_seg *segment = &exec->segments[seg_no];
 
 	LINKED_LIST *segment_used_pages = (LINKED_LIST *) segment->data;
-	if (!contains(&segment_used_pages, (uintptr_t) page_start)) {
+	if (!contains(segment_used_pages, (uintptr_t) page_start)) {
 		append(&segment_used_pages, (uintptr_t) page_start);
 		printList(segment_used_pages);
 		segment->data = (void *) segment_used_pages;
@@ -84,8 +85,7 @@ static void segv_handler(int signum, siginfo_t *info, void *context)
 		return;
 	}
 
-	int page_no = ((int) segment->vaddr - (int) page_start) / pageSize;
-//	fprintf(stderr, " %d\n" , page_no);
+	int page_no = (-(int) segment->vaddr + (int) page_start) / pageSize;
 
 	void *result = mmap(page_start,
 						pageSize,
@@ -109,6 +109,7 @@ static void segv_handler(int signum, siginfo_t *info, void *context)
 		char *buf = malloc(lungime_date);
 		int offset = segment->offset + pageSize * page_no;
 		pread(exec_fd, buf, lungime_date, offset);
+//		fprintf(stderr, "%d %s\n\n", page_no, buf);
 		memcpy(result, buf, lungime_date);
 //		fprintf(stderr, "INFO at: %p %p %d\n", result, executable_file, lungime_date);
 	}
@@ -123,8 +124,9 @@ static void segv_handler(int signum, siginfo_t *info, void *context)
 
 	int rc = mprotect(page_start, pageSize, segment->perm);
 	if (rc < 0) {
-		perror("mprotect");
+		perror("mprotect: ");
 	}
+//	fprintf(stderr, "Done with this signal\n");
 }
 
 int so_init_loader(void)
