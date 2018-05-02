@@ -15,7 +15,7 @@ typedef struct Node
 
 
 void append(struct Node** head_ref, uintptr_t new_data);
-int contains(struct Node** head_ref, uintptr_t data);
+int contains(struct Node* head_ref, uintptr_t data);
 void printList(struct Node *node);
 
 #endif //TEMA3_LINKED_LIST_H

@@ -34,21 +34,21 @@ void printList(struct Node *node)
 	}
 }
 
-int contains(struct Node** head_ref, uintptr_t data)
+int contains(struct Node* head_ref, uintptr_t data)
 {
-	struct Node *last = *head_ref;
-	if (*head_ref == NULL)
+	struct Node *last = head_ref;
+	if (last == NULL)
 	{
 		return 0;
 	}
 	else
 	{
-		do
+		while (last != NULL)
 		{
-			if(data==last->data)
+			if(data == last->data)
 				return 1;
 			last = last->next;
-		}while (last->next != NULL);
+		}
 	}
 
 	return 0;
